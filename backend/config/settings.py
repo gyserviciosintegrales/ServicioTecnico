@@ -105,7 +105,7 @@ SIMPLE_JWT = {
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 # ── CORS ──────────────────────────────────────────────
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # True en desarrollo, False en producción
+CORS_ALLOW_ALL_ORIGINS = True  # True en desarrollo, False en producción
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
