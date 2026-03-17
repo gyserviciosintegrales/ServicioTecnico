@@ -14,3 +14,6 @@ backend/dist/
 backend/build/
 backend/manage.spec
 backend/Profile
+backend/dist/
+backend/build/
+backend/manage.spec
