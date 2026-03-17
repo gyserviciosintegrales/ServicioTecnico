@@ -10,3 +10,7 @@ frontend/dist/
 frontend/.env
 frontend/.env.local
 desktop/
+backend/dist/
+backend/build/
+backend/manage.spec
+backend/Profile
