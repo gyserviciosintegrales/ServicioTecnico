@@ -1,12 +1,13 @@
 // src/pages/admin/Clientes.jsx
 import { useEffect, useState } from 'react';
-import { Users, Plus, Search, Edit2, Trash2, MapPin, Phone, CreditCard } from 'lucide-react';
+import { Users, Plus, Search, Edit2, Trash2, MapPin, Phone, CreditCard, Shield } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import EmptyState from '../../components/common/EmptyState';
 import api from '../../api/axios';
 import { getClientes, deleteCliente, updateCliente } from '../../api/clientes';
+import CambiarRolModal from '../../components/common/CambiarRolModal';
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
@@ -16,6 +17,7 @@ export default function Clientes() {
   const [modal, setModal] = useState({ open: false, data: null });
   const [confirm, setConfirm] = useState({ open: false, id: null });
   const [saving, setSaving] = useState(false);
+  const [modalRol, setModalRol] = useState(null);
   const [form, setForm] = useState({ dni: '', direccion: '', ciudad: '', notas: '' });
 
   const load = async () => {
@@ -110,7 +112,7 @@ export default function Clientes() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '6px' }}>
-                  <button onClick={() => openEdit(c)} style={{
+                  <button onClick={() => openEdit(c)} title="Editar" style={{
                     background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: '7px',
                     padding: '6px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', transition: 'all 0.15s'
                   }}
@@ -118,7 +120,15 @@ export default function Clientes() {
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
                     <Edit2 size={13} />
                   </button>
-                  <button onClick={() => setConfirm({ open: true, id: c.id })} style={{
+                  <button onClick={() => setModalRol(c.usuario)} title="Cambiar rol" style={{
+                    background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: '7px',
+                    padding: '6px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', transition: 'all 0.15s'
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.color = '#8b5cf6'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
+                    <Shield size={13} />
+                  </button>
+                  <button onClick={() => setConfirm({ open: true, id: c.id })} title="Eliminar" style={{
                     background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: '7px',
                     padding: '6px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', transition: 'all 0.15s'
                   }}
@@ -184,6 +194,17 @@ export default function Clientes() {
       <ConfirmDialog open={confirm.open} onClose={() => setConfirm({ open: false, id: null })}
         onConfirm={del} loading={saving}
         title="¿Eliminar cliente?" message="Esta acción eliminará el cliente y todos sus datos asociados. No se puede deshacer." />
+
+      {modalRol && (
+        <CambiarRolModal
+          usuario={modalRol}
+          onClose={() => setModalRol(null)}
+          onActualizado={(u) => {
+            setClientes(prev => prev.map(x => x.usuario?.id === u.id ? { ...x, usuario: { ...x.usuario, rol: u.rol } } : x));
+            setModalRol(null);
+          }}
+        />
+      )}
 
     </div>
   );

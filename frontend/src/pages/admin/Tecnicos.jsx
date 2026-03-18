@@ -1,12 +1,13 @@
 // src/pages/admin/Tecnicos.jsx
 import { useEffect, useState } from 'react';
-import { Wrench, Plus, Search, Edit2, Trash2, Tag, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Wrench, Plus, Search, Edit2, Trash2, Tag, ToggleLeft, ToggleRight, Shield } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import EmptyState from '../../components/common/EmptyState';
 import api from '../../api/axios';
 import { getTecnicos, createTecnico, updateTecnico, deleteTecnico, getEspecialidades, createEspecialidad } from '../../api/tecnicos';
+import CambiarRolModal from '../../components/common/CambiarRolModal';
 
 const COLORS = ['#06b6d4','#10b981','#8b5cf6','#f59e0b','#f97316','#ec4899','#3b82f6'];
 
@@ -19,6 +20,7 @@ export default function Tecnicos() {
   const [espModal, setEspModal] = useState(false);
   const [confirm, setConfirm] = useState({ open: false, id: null });
   const [saving, setSaving] = useState(false);
+  const [modalRol, setModalRol] = useState(null);
   const [form, setForm] = useState({
     username:'', email:'', first_name:'', last_name:'',
     password:'', password2:'', telefono:'', legajo:'',
@@ -169,12 +171,17 @@ export default function Tecnicos() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => openEdit(t)} style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: '7px', padding: '6px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', transition: 'all 0.15s' }}
+                    <button onClick={() => openEdit(t)} title="Editar" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: '7px', padding: '6px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', transition: 'all 0.15s' }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = '#06b6d4'; e.currentTarget.style.color = '#06b6d4'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
                       <Edit2 size={13} />
                     </button>
-                    <button onClick={() => setConfirm({ open: true, id: t.id })} style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: '7px', padding: '6px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', transition: 'all 0.15s' }}
+                    <button onClick={() => setModalRol(t.usuario)} title="Cambiar rol" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: '7px', padding: '6px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.color = '#8b5cf6'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
+                      <Shield size={13} />
+                    </button>
+                    <button onClick={() => setConfirm({ open: true, id: t.id })} title="Eliminar" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: '7px', padding: '6px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', transition: 'all 0.15s' }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
                       <Trash2 size={13} />
@@ -312,6 +319,17 @@ export default function Tecnicos() {
 
       <ConfirmDialog open={confirm.open} onClose={() => setConfirm({ open: false, id: null })}
         onConfirm={del} loading={saving} title="¿Eliminar técnico?" message="Se eliminará el técnico y su usuario del sistema." />
+
+      {modalRol && (
+        <CambiarRolModal
+          usuario={modalRol}
+          onClose={() => setModalRol(null)}
+          onActualizado={(u) => {
+            setTecnicos(prev => prev.map(x => x.usuario?.id === u.id ? { ...x, usuario: { ...x.usuario, rol: u.rol } } : x));
+            setModalRol(null);
+          }}
+        />
+      )}
 
     </div>
   );

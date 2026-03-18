@@ -73,7 +73,17 @@ export default function MisPresupuestos() {
     } finally { setLoadingAcc(null); }
   };
 
-  const abrirPDF = (id) => window.open(`${api.defaults.baseURL}/presupuestos/${id}/pdf/`, '_blank');
+  const abrirPDF = async (id) => {
+    try {
+      const response = await api.get(`/presupuestos/${id}/pdf/`, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url  = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      toast.error('Error al generar el PDF');
+    }
+  };
 
   const pendientes = presupuestos.filter(p => p.estado === 'enviado');
   const resto      = presupuestos.filter(p => p.estado !== 'enviado');

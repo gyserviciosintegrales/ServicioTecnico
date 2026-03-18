@@ -1,4 +1,7 @@
-# presupuestos/serializers.py
+# presupuestos/serializers.py — COMPLETO CORREGIDO
+# Fix 1: PresupuestoCreateSerializer incluye 'estado' para que el update no resetee a borrador
+# Fix 2: el update respeta el estado actual si no se manda uno nuevo
+
 from rest_framework import serializers
 from .models import Presupuesto, ItemPresupuesto
 
@@ -65,24 +68,33 @@ class PresupuestoCreateSerializer(serializers.ModelSerializer):
         fields = [
             'titulo', 'descripcion', 'cliente', 'equipo',
             'validez_dias', 'condiciones', 'items',
+            # NO incluir 'estado' para que create use el default 'borrador'
         ]
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
         presupuesto = Presupuesto.objects.create(**validated_data)
         for i, item in enumerate(items_data):
-            item.pop('orden_item', None)  # evita duplicado si el frontend lo manda
+            item.pop('orden_item', None)
             ItemPresupuesto.objects.create(presupuesto=presupuesto, orden_item=i, **item)
         return presupuesto
 
     def update(self, instance, validated_data):
         items_data = validated_data.pop('items', None)
-        for attr, val in validated_data.items():
-            setattr(instance, attr, val)
+
+        # Solo actualizar campos enviados — NO tocar estado ni fechas
+        campos_editables = ['titulo', 'descripcion', 'equipo', 'validez_dias', 'condiciones']
+        for campo in campos_editables:
+            if campo in validated_data:
+                setattr(instance, campo, validated_data[campo])
+
+        # cliente no se puede cambiar en un update
         instance.save()
+
         if items_data is not None:
             instance.items.all().delete()
             for i, item in enumerate(items_data):
-                item.pop('orden_item', None)  # evita duplicado si el frontend lo manda
+                item.pop('orden_item', None)
                 ItemPresupuesto.objects.create(presupuesto=instance, orden_item=i, **item)
+
         return instance

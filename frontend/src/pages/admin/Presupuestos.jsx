@@ -59,8 +59,18 @@ export default function Presupuestos() {
     } catch { toast.error('No se pudo eliminar'); }
   };
 
-  const abrirPDF = (id) => {
-    window.open(`${api.defaults.baseURL}/presupuestos/${id}/pdf/`, '_blank');
+  const abrirPDF = async (id) => {
+    try {
+      const response = await api.get(`/presupuestos/${id}/pdf/`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url  = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      toast.error('Error al generar el PDF');
+    }
   };
 
   const convertir = async (id) => {
