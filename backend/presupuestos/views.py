@@ -122,9 +122,10 @@ class PresupuestoViewSet(viewsets.ModelViewSet):
     # ── GET /presupuestos/{id}/pdf/ ──────────────────────
     @action(detail=True, methods=['get'])
     def pdf(self, request, pk=None):
-        pres = self.get_object()
-        pdf_bytes = self._generar_pdf(pres)
-        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        from ordenes.pdf_generator import generar_pdf_presupuesto
+        pres      = self.get_object()
+        pdf_bytes = generar_pdf_presupuesto(pres)
+        response  = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="presupuesto_{str(pres.numero).zfill(4)}.pdf"'
         return response
 
