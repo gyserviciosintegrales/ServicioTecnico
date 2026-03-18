@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff, LogIn, User, Lock } from 'lucide-react';
 import { toast } from 'react-toastify';
-import logo from '../assets/logo_taller.png';
+import logo from '../assets/logo_GY.png';
 
 export default function Login() {
   const { login } = useAuth();
@@ -161,7 +161,7 @@ export default function Login() {
         }
 
         .login-logo {
-          height: 120px; 
+          height: 200px;
           width: auto;
           object-fit: contain;
           margin-bottom: 16px;

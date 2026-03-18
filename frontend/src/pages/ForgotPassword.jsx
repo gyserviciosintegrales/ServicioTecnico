@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import api from '../api/axios';
-import logo from '../assets/logo_taller.png';
+import logo from '../assets/logo_GY.png';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -65,7 +65,7 @@ const COMMON_CSS = `
   .bg-decoration { position: absolute; inset: 0; background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0); background-size: 32px 32px; mask-image: radial-gradient(circle at center, black, transparent 80%); pointer-events: none; }
   .login-card-wrapper { width: 100%; z-index: 10; animation: fadeInUp 0.7s ease; }
   .login-header { text-align: center; margin-bottom: 32px; display: flex; flex-direction: column; align-items: center; }
-  .login-logo { height: 120px; width: auto; object-fit: contain; margin-bottom: 16px; filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.5)); }
+  .login-logo { height: 200px; width: auto; object-fit: contain; margin-bottom: 16px; filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.5)); }
   .login-header h1 { font-size: 32px; font-weight: 800; margin: 0; }
   .login-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; padding: 32px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
   .register-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
