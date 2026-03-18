@@ -55,8 +55,8 @@ def _qr_image(texto, size=28*mm):
 def _logo_image(height=14*mm):
     """Carga el logo del taller si existe."""
     posibles = [
-        os.path.join(settings.BASE_DIR, 'static', 'logo_taller.png'),
-        os.path.join(settings.BASE_DIR, 'media', 'logo_taller.png'),
+        os.path.join(settings.BASE_DIR, 'static', 'logo_GY.png'),
+        os.path.join(settings.BASE_DIR, 'media', 'logo_GY.png'),
     ]
     for path in posibles:
         if os.path.exists(path):
