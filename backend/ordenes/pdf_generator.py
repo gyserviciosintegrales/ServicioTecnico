@@ -52,18 +52,27 @@ def _qr_image(texto, size=28*mm):
         return None
 
 
-def _logo_image(height=14*mm):
-    """Carga el logo del taller si existe."""
+def _logo_image(max_height=18*mm, max_width=55*mm):
+    """Carga el logo manteniendo proporciones reales."""
     posibles = [
         os.path.join(settings.BASE_DIR, 'static', 'logo_GY.png'),
-        os.path.join(settings.BASE_DIR, 'media', 'logo_GY.png'),
+        os.path.join(settings.BASE_DIR, 'media',  'logo_GY.png'),
+        os.path.join(settings.BASE_DIR, 'static', 'logo_GY.png'),
+        os.path.join(settings.BASE_DIR, 'media',  'logo_GY.png'),
     ]
     for path in posibles:
         if os.path.exists(path):
             try:
-                return Image(path, height=height, width=height * 3)
+                from PIL import Image as PILImage
+                with PILImage.open(path) as img:
+                    w_px, h_px = img.size
+                scale   = min(max_height / h_px, max_width / w_px)
+                return Image(path, width=w_px * scale, height=h_px * scale)
             except Exception:
-                pass
+                try:
+                    return Image(path, height=max_height, width=max_height * 2.5)
+                except Exception:
+                    pass
     return None
 
 
@@ -115,33 +124,40 @@ def generar_pdf_orden(orden):
     logo = _logo_image()
     qr   = _qr_image(f'ORDEN-{str(orden.id).zfill(4)}')
 
-    # Fila header: logo | info taller | QR
-    header_izq = [
-        [logo or Paragraph(f'<b>{taller}</b>', _estilo('tn', fontSize=16, fontName='Helvetica-Bold', textColor=NEGRO))],
-        [Paragraph(taller if logo else '', S['sub'])],
-        [Paragraph(tel_t, S['small'])],
-        [Paragraph(email_t, S['small'])],
+    # Columna izquierda: logo + datos taller
+    izq_rows = []
+    if logo:
+        izq_rows.append([logo])
+        izq_rows.append([Spacer(1, 2*mm)])
+    else:
+        izq_rows.append([Paragraph(f'<b>{taller}</b>', _estilo('tn', fontSize=16, fontName='Helvetica-Bold', textColor=NEGRO))])
+        izq_rows.append([Spacer(1, 2*mm)])
+    izq_rows.append([Paragraph(taller, _estilo('tnb', fontSize=9, fontName='Helvetica-Bold', textColor=GRIS_OSCURO))])
+    izq_rows.append([Paragraph(tel_t, S['small'])])
+    izq_rows.append([Paragraph(email_t, S['small'])])
+    t_izq = Table(izq_rows, colWidths=[ancho * 0.55])
+    t_izq.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),1),('BOTTOMPADDING',(0,0),(-1,-1),1)]))
+
+    # Columna derecha: título + número + QR
+    der_rows = [
+        [Paragraph('ORDEN DE TRABAJO', _estilo('ot1', fontSize=9, fontName='Helvetica-Bold',
+                    textColor=GRIS_MEDIO, alignment=TA_RIGHT))],
+        [Paragraph(f'#{str(orden.id).zfill(4)}', _estilo('ot2', fontSize=26, fontName='Helvetica-Bold',
+                    textColor=NEGRO, alignment=TA_RIGHT, leading=30))],
     ]
-
-    header_der_content = []
     if qr:
-        header_der_content.append([qr])
-        header_der_content.append([Paragraph(f'ORDEN #{str(orden.id).zfill(4)}', _estilo('qrl', fontSize=7, alignment=TA_CENTER, textColor=GRIS_MEDIO))])
+        # tabla interna para alinear QR a la derecha
+        qr_t = Table([[qr]], colWidths=[ancho * 0.45])
+        qr_t.setStyle(TableStyle([('ALIGN',(0,0),(-1,-1),'RIGHT')]))
+        der_rows.append([qr_t])
+        der_rows.append([Paragraph(f'Escanear para verificar', _estilo('qrt', fontSize=6,
+                    textColor=GRIS_MEDIO, alignment=TA_RIGHT))])
+    t_der = Table(der_rows, colWidths=[ancho * 0.45])
+    t_der.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),1),('BOTTOMPADDING',(0,0),(-1,-1),1)]))
 
-    t_header = Table(
-        [[
-            Table(header_izq, colWidths=[ancho * 0.55]),
-            Paragraph(
-                f'<b>ORDEN DE TRABAJO</b><br/>'
-                f'<font size="22" color="#0f172a">#{str(orden.id).zfill(4)}</font>',
-                _estilo('ot', fontSize=10, fontName='Helvetica-Bold', alignment=TA_RIGHT, textColor=GRIS_MEDIO, leading=28)
-            ) if not qr else Table(header_der_content, colWidths=[ancho * 0.45]),
-        ]],
-        colWidths=[ancho * 0.55, ancho * 0.45],
-    )
+    t_header = Table([[t_izq, t_der]], colWidths=[ancho * 0.55, ancho * 0.45])
     t_header.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('ALIGN',  (1,0), (1,0),  'RIGHT'),
     ]))
     story.append(t_header)
     story.append(Spacer(1, 4*mm))
@@ -412,31 +428,36 @@ def generar_pdf_presupuesto(pres):
         return [Paragraph(label, S['label']), Paragraph(str(valor) if valor else '—', S['valor'])]
 
     # ── ENCABEZADO ──────────────────────────────────────
-    header_izq_rows = []
+    izq_rows = []
     if logo:
-        header_izq_rows.append([logo])
-    header_izq_rows += [
-        [Paragraph(f'<b>{taller}</b>' if not logo else '', _estilo('tn', fontSize=14, fontName='Helvetica-Bold', textColor=NEGRO))],
-        [Paragraph(tel_t, S['small'])],
-        [Paragraph(email_t, S['small'])],
+        izq_rows.append([logo])
+        izq_rows.append([Spacer(1, 2*mm)])
+    else:
+        izq_rows.append([Paragraph(f'<b>{taller}</b>', _estilo('tn', fontSize=16, fontName='Helvetica-Bold', textColor=NEGRO))])
+        izq_rows.append([Spacer(1, 2*mm)])
+    izq_rows.append([Paragraph(taller, _estilo('tnb', fontSize=9, fontName='Helvetica-Bold', textColor=GRIS_OSCURO))])
+    izq_rows.append([Paragraph(tel_t, S['small'])])
+    izq_rows.append([Paragraph(email_t, S['small'])])
+    t_izq = Table(izq_rows, colWidths=[ancho * 0.55])
+    t_izq.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),1),('BOTTOMPADDING',(0,0),(-1,-1),1)]))
+
+    der_rows = [
+        [Paragraph('PRESUPUESTO', _estilo('pt1', fontSize=9, fontName='Helvetica-Bold',
+                    textColor=GRIS_MEDIO, alignment=TA_RIGHT))],
+        [Paragraph(f'#{str(pres.numero).zfill(4)}', _estilo('pt2', fontSize=26, fontName='Helvetica-Bold',
+                    textColor=NEGRO, alignment=TA_RIGHT, leading=30))],
     ]
-
-    header_der_rows = []
     if qr:
-        header_der_rows.append([qr])
-        header_der_rows.append([Paragraph(f'PRES. #{str(pres.numero).zfill(4)}', _estilo('qrl', fontSize=7, alignment=TA_CENTER, textColor=GRIS_MEDIO))])
+        qr_t = Table([[qr]], colWidths=[ancho * 0.45])
+        qr_t.setStyle(TableStyle([('ALIGN',(0,0),(-1,-1),'RIGHT')]))
+        der_rows.append([qr_t])
+        der_rows.append([Paragraph('Escanear para verificar', _estilo('qrt', fontSize=6,
+                    textColor=GRIS_MEDIO, alignment=TA_RIGHT))])
+    t_der = Table(der_rows, colWidths=[ancho * 0.45])
+    t_der.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),1),('BOTTOMPADDING',(0,0),(-1,-1),1)]))
 
-    t_header = Table([[
-        Table(header_izq_rows, colWidths=[ancho*0.55]),
-        Paragraph(
-            f'<b>PRESUPUESTO</b><br/><font size="22" color="#0f172a">#{str(pres.numero).zfill(4)}</font>',
-            _estilo('ph', fontSize=10, fontName='Helvetica-Bold', alignment=TA_RIGHT, textColor=GRIS_MEDIO, leading=28)
-        ) if not qr else Table(header_der_rows, colWidths=[ancho*0.45]),
-    ]], colWidths=[ancho*0.55, ancho*0.45])
-    t_header.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('ALIGN',  (1,0), (1,0),  'RIGHT'),
-    ]))
+    t_header = Table([[t_izq, t_der]], colWidths=[ancho * 0.55, ancho * 0.45])
+    t_header.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     story.append(t_header)
     story.append(Spacer(1, 4*mm))
     story.append(HRFlowable(width=ancho, thickness=2, color=NEGRO, spaceAfter=4*mm))

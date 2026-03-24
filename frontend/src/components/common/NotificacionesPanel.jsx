@@ -1,6 +1,6 @@
 // src/components/common/NotificacionesPanel.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, X, CheckCheck, Clock, Package, RefreshCw } from 'lucide-react';
+import { Bell, X, CheckCheck, Clock, RefreshCw } from 'lucide-react';
 import api from '../../api/axios';
 
 const TIPO_CONFIG = {
@@ -12,7 +12,6 @@ const TIPO_CONFIG = {
   sistema:         { icon: '⚙️', color: '#f59e0b' },
 };
 
-// ── Polling cada 30 segundos ────────────────────────────
 const POLL_INTERVAL = 30_000;
 
 export default function NotificacionesPanel() {
@@ -22,43 +21,42 @@ export default function NotificacionesPanel() {
   const [loading, setLoading]       = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const panelRef                    = useRef(null);
+  const btnRef                      = useRef(null);
   const pollRef                     = useRef(null);
 
-  // Obtener conteo sin abrir (para el badge)
   const fetchConteo = useCallback(async () => {
     try {
       const { data } = await api.get('/notificaciones/conteo/');
       setNoLeidas(data.no_leidas);
-    } catch { /* silencioso */ }
+    } catch {}
   }, []);
 
-  // Obtener lista completa (al abrir el panel)
   const fetchNotifs = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/notificaciones/');
       setNotifs(data.results || []);
       setNoLeidas(data.no_leidas || 0);
-    } catch { /* silencioso */ }
+    } catch {}
     finally { setLoading(false); }
   }, []);
 
-  // Polling: conteo cada 30s
   useEffect(() => {
     fetchConteo();
     pollRef.current = setInterval(fetchConteo, POLL_INTERVAL);
     return () => clearInterval(pollRef.current);
   }, [fetchConteo]);
 
-  // Al abrir, cargar lista completa
   useEffect(() => {
     if (open) fetchNotifs();
   }, [open, fetchNotifs]);
 
-  // Cerrar al hacer click afuera
   useEffect(() => {
     const handler = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target) &&
+        btnRef.current   && !btnRef.current.contains(e.target)
+      ) {
         setOpen(false);
       }
     };
@@ -66,23 +64,21 @@ export default function NotificacionesPanel() {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Marcar una como leída
   const marcarLeida = async (id) => {
     try {
       await api.post(`/notificaciones/${id}/leer/`);
       setNotifs(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
       setNoLeidas(prev => Math.max(0, prev - 1));
-    } catch { /* silencioso */ }
+    } catch {}
   };
 
-  // Marcar todas como leídas
   const marcarTodas = async () => {
     setMarkingAll(true);
     try {
       await api.post('/notificaciones/leer_todas/');
       setNotifs(prev => prev.map(n => ({ ...n, leida: true })));
       setNoLeidas(0);
-    } catch { /* silencioso */ }
+    } catch {}
     finally { setMarkingAll(false); }
   };
 
@@ -90,101 +86,76 @@ export default function NotificacionesPanel() {
   const leidasList   = notifs.filter(n => n.leida);
 
   return (
-    <div ref={panelRef} style={{ position: 'relative' }}>
+    <div style={{ position: 'relative' }}>
 
-      {/* ── Botón campana ── */}
+      {/* Botón campana */}
       <button
+        ref={btnRef}
         onClick={() => setOpen(v => !v)}
         style={{
-          position:     'relative',
-          background:   open ? 'rgba(6,182,212,0.1)' : 'var(--bg-hover)',
-          border:       `1px solid ${open ? 'rgba(6,182,212,0.35)' : 'var(--border)'}`,
-          borderRadius: '9px',
-          padding:      '7px',
-          cursor:       'pointer',
-          color:        open ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-          display:      'flex',
-          transition:   'all 0.15s',
+          position: 'relative',
+          background: open ? 'rgba(6,182,212,0.1)' : 'var(--bg-secondary)',
+          border: `1px solid ${open ? 'rgba(6,182,212,0.35)' : 'var(--border)'}`,
+          borderRadius: '8px', padding: '7px', cursor: 'pointer',
+          color: open ? 'var(--accent-cyan)' : 'var(--text-muted)',
+          display: 'flex', transition: 'all 0.15s',
         }}
-        onMouseEnter={e => {
-          if (!open) {
-            e.currentTarget.style.borderColor = 'rgba(6,182,212,0.35)';
-            e.currentTarget.style.color = 'var(--accent-cyan)';
-          }
-        }}
-        onMouseLeave={e => {
-          if (!open) {
-            e.currentTarget.style.borderColor = 'var(--border)';
-            e.currentTarget.style.color = 'var(--text-secondary)';
-          }
-        }}
-        title="Notificaciones"
       >
         <Bell size={16} />
-        {/* Badge */}
         {noLeidas > 0 && (
           <span style={{
-            position:     'absolute',
-            top:          '-5px',
-            right:        '-5px',
-            background:   '#ef4444',
-            color:        '#fff',
-            fontSize:     '10px',
-            fontWeight:   '700',
-            lineHeight:   '1',
-            padding:      '2px 5px',
-            borderRadius: '999px',
-            minWidth:     '16px',
-            textAlign:    'center',
-            fontFamily:   'JetBrains Mono, monospace',
-            border:       '2px solid var(--bg-secondary)',
-            animation:    'pulse-red 2s infinite',
+            position: 'absolute', top: '-5px', right: '-5px',
+            background: '#ef4444', color: '#fff',
+            fontSize: '10px', fontWeight: '800', lineHeight: '1',
+            padding: '2px 5px', borderRadius: '999px',
+            minWidth: '16px', textAlign: 'center',
+            border: '2px solid var(--bg-card)',
+            animation: 'pulse-red 2s infinite',
           }}>
             {noLeidas > 99 ? '99+' : noLeidas}
           </span>
         )}
       </button>
 
-      {/* ── Panel desplegable ── */}
+      {/* Panel — posición fija relativa al viewport */}
       {open && (
-        <div style={{
-          position:     'fixed',
-          top:          'calc(var(--topbar-h) + 8px)',
-          right:        '16px',
-          width:        'min(400px, calc(100vw - 32px))',
-          maxHeight:    'min(520px, calc(100vh - 100px))',
-          background:   'var(--bg-card)',
-          border:       '1px solid var(--border-light)',
-          borderRadius: '14px',
-          boxShadow:    '0 20px 60px rgba(0,0,0,0.4)',
-          display:      'flex',
-          flexDirection:'column',
-          animation:    'fadeInDown 0.2s ease',
-          zIndex:       200,
-          overflow:     'hidden',
-        }}>
+        <div
+          ref={panelRef}
+          style={{
+            position: 'fixed',
+            top: '68px',
+            right: '16px',
+            width: 'min(420px, calc(100vw - 24px))',
+            maxHeight: 'calc(100vh - 90px)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-light)',
+            borderRadius: '16px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'fadeInDown 0.18s ease',
+            zIndex: 500,
+            overflow: 'hidden',
+          }}
+        >
 
           {/* Header */}
           <div style={{
-            padding:        '14px 16px',
-            borderBottom:   '1px solid var(--border)',
-            display:        'flex',
-            alignItems:     'center',
-            justifyContent: 'space-between',
-            flexShrink:     0,
+            padding: '14px 16px',
+            borderBottom: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexShrink: 0,
+            background: 'var(--bg-secondary)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Bell size={15} color="var(--accent-cyan)" />
-              <span style={{ fontWeight: '600', fontSize: '14px' }}>Notificaciones</span>
+              <span style={{ fontWeight: '700', fontSize: '14px' }}>Notificaciones</span>
               {noLeidas > 0 && (
                 <span style={{
-                  background:   'rgba(239,68,68,0.15)',
-                  color:        '#ef4444',
-                  border:       '1px solid rgba(239,68,68,0.3)',
-                  fontSize:     '11px',
-                  fontWeight:   '700',
-                  padding:      '1px 7px',
-                  borderRadius: '999px',
+                  background: 'rgba(239,68,68,0.15)', color: '#ef4444',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  fontSize: '11px', fontWeight: '700',
+                  padding: '1px 7px', borderRadius: '999px',
                 }}>
                   {noLeidas} nueva{noLeidas !== 1 ? 's' : ''}
                 </span>
@@ -192,23 +163,13 @@ export default function NotificacionesPanel() {
             </div>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               {noLeidas > 0 && (
-                <button
-                  onClick={marcarTodas}
-                  disabled={markingAll}
-                  title="Marcar todas como leídas"
+                <button onClick={marcarTodas} disabled={markingAll} title="Marcar todas como leídas"
                   style={{
-                    background:   'none',
-                    border:       '1px solid var(--border)',
-                    borderRadius: '7px',
-                    padding:      '5px 8px',
-                    cursor:       'pointer',
-                    color:        'var(--text-muted)',
-                    fontSize:     '11px',
-                    display:      'flex',
-                    alignItems:   'center',
-                    gap:          '4px',
-                    transition:   'all 0.15s',
-                    fontFamily:   'Space Grotesk, sans-serif',
+                    background: 'none', border: '1px solid var(--border)',
+                    borderRadius: '7px', padding: '5px 8px', cursor: 'pointer',
+                    color: 'var(--text-muted)', fontSize: '11px',
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                    fontFamily: 'Space Grotesk, sans-serif', transition: 'all 0.15s',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.color = 'var(--accent-cyan)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
@@ -220,29 +181,15 @@ export default function NotificacionesPanel() {
                   Leer todo
                 </button>
               )}
-              <button
-                onClick={fetchNotifs}
-                disabled={loading}
-                title="Actualizar"
-                style={{
-                  background: 'none', border: '1px solid var(--border)',
-                  borderRadius: '7px', padding: '5px',
-                  cursor: 'pointer', color: 'var(--text-muted)',
-                  display: 'flex', transition: 'all 0.15s',
-                }}
+              <button onClick={fetchNotifs} disabled={loading} title="Actualizar"
+                style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '7px', padding: '5px', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', transition: 'all 0.15s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.color = 'var(--accent-cyan)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
               >
                 <RefreshCw size={12} style={{ animation: loading ? 'spin 0.8s linear infinite' : 'none' }} />
               </button>
-              <button
-                onClick={() => setOpen(false)}
-                style={{
-                  background: 'none', border: '1px solid var(--border)',
-                  borderRadius: '7px', padding: '5px',
-                  cursor: 'pointer', color: 'var(--text-muted)',
-                  display: 'flex', transition: 'all 0.15s',
-                }}
+              <button onClick={() => setOpen(false)}
+                style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '7px', padding: '5px', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', transition: 'all 0.15s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
               >
@@ -251,57 +198,39 @@ export default function NotificacionesPanel() {
             </div>
           </div>
 
-          {/* Lista */}
-          <div style={{ overflowY: 'auto', flex: 1 }}>
+          {/* Lista scrolleable */}
+          <div style={{ overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}>
             {loading && notifs.length === 0 ? (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '48px' }}>
                 <div style={{ width: '22px', height: '22px', border: '2px solid var(--border)', borderTopColor: 'var(--accent-cyan)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
               </div>
             ) : notifs.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-                <div style={{ fontSize: '28px', marginBottom: '10px' }}>🔔</div>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '500' }}>Sin notificaciones</p>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Todo está al día</p>
+              <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔔</div>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600', margin: '0 0 4px' }}>Sin notificaciones</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Todo está al día</p>
               </div>
             ) : (
               <>
-                {/* No leídas */}
                 {noLeidasList.length > 0 && (
                   <div>
-                    <div style={{
-                      padding: '8px 16px 4px',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                      color: 'var(--text-muted)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                    }}>
-                      Nuevas
+                    <div style={{ padding: '10px 16px 4px', fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Nuevas ({noLeidasList.length})
                     </div>
-                    {noLeidasList.map(n => (
-                      <NotifItem key={n.id} notif={n} onRead={marcarLeida} />
-                    ))}
+                    {noLeidasList.map(n => <NotifItem key={n.id} notif={n} onRead={marcarLeida} />)}
                   </div>
                 )}
-
-                {/* Leídas */}
                 {leidasList.length > 0 && (
                   <div>
                     <div style={{
-                      padding: '8px 16px 4px',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                      color: 'var(--text-muted)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
+                      padding: '10px 16px 4px', fontSize: '10px', fontWeight: '700',
+                      color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em',
                       borderTop: noLeidasList.length > 0 ? '1px solid var(--border)' : 'none',
                       marginTop: noLeidasList.length > 0 ? '4px' : '0',
                     }}>
                       Anteriores
                     </div>
-                    {leidasList.map(n => (
-                      <NotifItem key={n.id} notif={n} onRead={marcarLeida} />
-                    ))}
+                    {leidasList.map(n => <NotifItem key={n.id} notif={n} onRead={marcarLeida} />)}
                   </div>
                 )}
               </>
@@ -311,11 +240,9 @@ export default function NotificacionesPanel() {
           {/* Footer */}
           {notifs.length > 0 && (
             <div style={{
-              padding:    '10px 16px',
-              borderTop:  '1px solid var(--border)',
-              flexShrink: 0,
-              display:    'flex',
-              justifyContent: 'center',
+              padding: '10px 16px', borderTop: '1px solid var(--border)',
+              flexShrink: 0, textAlign: 'center',
+              background: 'var(--bg-secondary)',
             }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
                 {notifs.length} notificación{notifs.length !== 1 ? 'es' : ''} · actualiza cada 30s
@@ -327,8 +254,8 @@ export default function NotificacionesPanel() {
 
       <style>{`
         @keyframes fadeInDown {
-          from { opacity: 0; transform: translateY(-8px); }
-          to   { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes pulse-red {
           0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
@@ -342,38 +269,34 @@ export default function NotificacionesPanel() {
 
 // ── Item individual ────────────────────────────────────
 function NotifItem({ notif, onRead }) {
-  const cfg    = TIPO_CONFIG[notif.tipo] ?? { icon: '📋', color: '#94a3b8' };
-  const isNew  = !notif.leida;
+  const cfg   = TIPO_CONFIG[notif.tipo] ?? { icon: '📋', color: '#94a3b8' };
+  const isNew = !notif.leida;
+  const [expandido, setExpandido] = useState(false);
 
   return (
     <div
-      onClick={() => { if (isNew) onRead(notif.id); }}
       style={{
-        padding:    '12px 16px',
-        display:    'flex',
-        gap:        '11px',
-        alignItems: 'flex-start',
-        cursor:     isNew ? 'pointer' : 'default',
-        background: isNew ? `${cfg.color}07` : 'transparent',
-        borderLeft: isNew ? `3px solid ${cfg.color}` : '3px solid transparent',
+        padding: '12px 16px',
+        display: 'flex', gap: '11px', alignItems: 'flex-start',
+        cursor: 'pointer',
+        background: isNew ? `${cfg.color}08` : 'transparent',
+        borderLeft: `3px solid ${isNew ? cfg.color : 'transparent'}`,
         transition: 'background 0.15s',
+        borderBottom: '1px solid var(--border)',
       }}
-      onMouseEnter={e => { if (isNew) e.currentTarget.style.background = `${cfg.color}12`; }}
-      onMouseLeave={e => { if (isNew) e.currentTarget.style.background = `${cfg.color}07`; }}
+      onMouseEnter={e => { e.currentTarget.style.background = `${cfg.color}12`; }}
+      onMouseLeave={e => { e.currentTarget.style.background = isNew ? `${cfg.color}08` : 'transparent'; }}
+      onClick={() => {
+        if (isNew) onRead(notif.id);
+        setExpandido(v => !v);
+      }}
     >
       {/* Icono */}
       <div style={{
-        width:        '34px',
-        height:       '34px',
-        borderRadius: '50%',
-        background:   `${cfg.color}15`,
-        border:       `1px solid ${cfg.color}25`,
-        display:      'flex',
-        alignItems:   'center',
-        justifyContent: 'center',
-        fontSize:     '15px',
-        flexShrink:   0,
-        marginTop:    '1px',
+        width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
+        background: `${cfg.color}15`, border: `1px solid ${cfg.color}25`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '16px', marginTop: '1px',
       }}>
         {cfg.icon}
       </div>
@@ -381,40 +304,33 @@ function NotifItem({ notif, onRead }) {
       {/* Texto */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize:   '13px',
-          fontWeight: isNew ? '600' : '500',
-          color:      isNew ? 'var(--text-primary)' : 'var(--text-secondary)',
-          marginBottom: '3px',
-          lineHeight: '1.3',
+          fontSize: '13px', fontWeight: isNew ? '700' : '500',
+          color: isNew ? 'var(--text-primary)' : 'var(--text-secondary)',
+          marginBottom: '4px', lineHeight: '1.35',
         }}>
           {notif.titulo}
         </div>
+
+        {/* Mensaje — expandible, SIN clamp */}
         <div style={{
-          fontSize:   '12px',
-          color:      'var(--text-muted)',
-          lineHeight: '1.4',
-          marginBottom: '5px',
-          display:    '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow:   'hidden',
+          fontSize: '12px', color: 'var(--text-muted)',
+          lineHeight: '1.55', marginBottom: '6px',
+          // Mensaje completo visible, sin recorte
+          wordBreak: 'break-word',
+          whiteSpace: 'pre-wrap',
         }}>
           {notif.mensaje}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Clock size={10} color="var(--text-muted)" />
           <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
             {notif.fecha_display}
           </span>
           {isNew && (
             <span style={{
-              marginLeft:   '6px',
-              width:        '6px',
-              height:       '6px',
-              borderRadius: '50%',
-              background:   cfg.color,
-              display:      'inline-block',
-              flexShrink:   0,
+              width: '6px', height: '6px', borderRadius: '50%',
+              background: cfg.color, display: 'inline-block', marginLeft: '4px',
             }} />
           )}
         </div>
